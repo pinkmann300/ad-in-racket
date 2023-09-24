@@ -1,0 +1,39 @@
+#lang typed/racket
+
+(require math/flonum)
+
+(struct (t) Num
+  ([add : (-> t t t)]
+   [neg : (-> t t)]
+   [mul : (-> t t t)]
+   [div : (-> t t t)]
+   [sqrt : (-> t t)])
+  #:transparent)
+
+(struct Dual ([x : Float] [dx : Float])
+  #:transparent)
+
+(define DualNum
+  (Num
+   (λ ([a : Dual] [b : Dual])
+     (Dual (+ (Dual-x a) (Dual-x b))
+           (+ (Dual-dx a) (Dual-dx b))))
+   (λ ([a : Dual])
+     (Dual (- (Dual-x a)) (- (Dual-dx a))))
+   (λ ([a : Dual] [b : Dual])
+     (Dual (* (Dual-x a) (Dual-x b))
+           (+ (* (Dual-x a) (Dual-dx b))
+              (* (Dual-x b) (Dual-dx a)))))
+   (λ ([a : Dual] [b : Dual])
+     (Dual (* (Dual-x a) (Dual-x b))
+           (+ (* (Dual-x a) (Dual-dx b))
+              (* (Dual-x b) (Dual-dx a)))))
+   (λ ([a : Dual])
+     (Dual (flsqrt (Dual-x a))
+           (* (/ 1.0 (* 2.0 (flsqrt (Dual-x a)))) (Dual-dx a))))))
+  
+
+(: square (All (t) (-> (Num t) t t)))
+(define (square tc x)
+  ((Num-mul tc) x x))
+

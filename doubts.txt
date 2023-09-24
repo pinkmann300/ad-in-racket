@@ -1,0 +1,18 @@
+
+This text document will list down the doubts that arise while working on the capstone. Primarily storing these so that 
+I do not forget to ask my doubts during the weekly meeting. 
+
+1) Not very confident with the type definition of Taylor Numbers 
+
+2) Is the error on line 47 of taylor_num.rkt because of the check-within constraint not being used inside the test case for the floating point values in the function attribute of the Taylor number. 
+
+3) With respect to the haskell definitions in "taylorz.hs" at github.com/srikumarks/df/blob/master/taylorz.hs
+	- Line 88 : How can Taylor construct accept a value of integer 0 when its type definition only allows 
+		    for 'Zero' or 'Taylor' ? Does this have to do with the fact that Taylor is also an instance of the Fractional class in some sense.
+	- Line 79 : While the other declarations in the Taylor instance of Num lead to another Taylor number why 
+		    does mult definitions allow for 0 as the number. How does Haskell support this also? The same doubts exist with the abs and negate and signum.
+	
+4) Consult on the usage of TaylorNum as a union type of Flonum, Zero (the empty struct) and Taylor 
+5) If flonum union is allowed, then why need (Zero) at all because I can pass it as 0.0 everywhere and suitable fractional values everywhere else
+
+
