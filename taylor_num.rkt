@@ -5,7 +5,7 @@
 (require racket/flonum)
 
 ; My Haskell Saviour:
-; data Taylor x = Zero | Taylor x (Taylor x)
+; data Taylor x = Zero | Taylor x (Taylor x)   -> | Union types are the saviour 
 
 (: factorial (-> Integer Integer))
 (define (factorial n)
@@ -15,7 +15,7 @@
 
 (define-type TaylorZ (U Zero Taylor))
 
-(struct Zero ()
+(struct Zero ([x : Flonum])
   #:transparent)
 
 (struct Taylor
@@ -24,13 +24,13 @@
 
 (: f (-> TaylorZ Flonum))
 (define (f t)
-  (if (eq? (Zero) t)
-      0.0
+  (if (eq? (Zero x) t)
+      x
       (if (Taylor? t)
           (Taylor-x t)
           0.0)))
      
-(check-within (f (Zero)) 0.0 0.000000001)
+(check-within (f (Zero 0.0)) 0.0 0.000000001)
 (check-within (f (Taylor 2.0 (Taylor 5.0 (Zero)))) 2.0 0.0000001)
 
 (: df (-> TaylorZ TaylorZ))
@@ -55,7 +55,7 @@
 (: x (-> Flonum TaylorZ))
 (define
   (x a)
-  (Taylor a 1.0))
+  (Taylor a (Taylor 1.0 (Zero))))
 
 
 (: teval (-> Integer TaylorZ Flonum Flonum))
@@ -84,18 +84,18 @@
 (define
   (TaylorMul [a : TaylorZ] [b : TaylorZ])
      (match (list a b)
-       [(list (Zero) b) 0.0]
-       [(list a (Zero)) 0.0]
+       [(list (Zero) b) (Zero)]
+       [(list a (Zero)) (Zero)]
        [(list a b) (Taylor (fl* (f a) (f b))
                            (TaylorAdd
                             (TaylorMul (df a) b)
-                            (TaylorMul (df b) a)))])
+                            (TaylorMul (df b) a)))]))
 
 (: TaylorNegate (-> TaylorZ TaylorZ))
 (define
   (TaylorNegate [a : TaylorZ])
      (match a
-       [(Zero) 0.0]
+       [(Zero) (Zero)]
        [a  (Taylor (fl* -1.0 (f a))
                    (TaylorNegate (df a)))]))
 
@@ -103,7 +103,7 @@
 (define
   (TaylorSignum [a : TaylorZ])
      (match a
-       [(Zero) 0.0]
+       [(Zero) (Zero)]
        [a (Taylor (sgn (f a))
                   (TaylorSignum (df a)))]))
 
@@ -111,16 +111,16 @@
 (define
   (TaylorAbsol [a : TaylorZ])
      (match a
-       [(Zero) 0.0]
+       [(Zero) (Zero)]
        [a (Taylor (sgn (f a))
-                  0.0)]))
+                  (Zero))]))
 
 (: TaylorFromFloat (-> Flonum TaylorZ))
 (define
   (TaylorFromFloat [a : Flonum])
      (match a
        [0.0 (Zero)]
-       [a (Taylor a 0.0)]))
+       [a (Taylor a (Zero))]))
 
 
 (struct (t) Num
