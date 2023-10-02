@@ -15,7 +15,7 @@
 
 (define-type TaylorZ (U Zero Taylor))
 
-(struct Zero ([x : Flonum])
+(struct Zero ()
   #:transparent)
 
 (struct Taylor
@@ -24,13 +24,13 @@
 
 (: f (-> TaylorZ Flonum))
 (define (f t)
-  (if (eq? (Zero x) t)
-      x
+  (if (eq? (Zero) t)
+      0.0
       (if (Taylor? t)
           (Taylor-x t)
           0.0)))
      
-(check-within (f (Zero 0.0)) 0.0 0.000000001)
+(check-within (f (Zero)) 0.0 0.000000001)
 (check-within (f (Taylor 2.0 (Taylor 5.0 (Zero)))) 2.0 0.0000001)
 
 (: df (-> TaylorZ TaylorZ))
@@ -91,6 +91,7 @@
                             (TaylorMul (df a) b)
                             (TaylorMul (df b) a)))]))
 
+
 (: TaylorNegate (-> TaylorZ TaylorZ))
 (define
   (TaylorNegate [a : TaylorZ])
@@ -122,7 +123,6 @@
        [0.0 (Zero)]
        [a (Taylor a (Zero))]))
 
-
 (struct (t) Num
   ([add : (-> t t t)]
    [mul : (-> t t t)]
@@ -131,7 +131,6 @@
    [signum : (-> t t)]
    [fromFloat : (-> Float t)])
   #:transparent)
-
 
 ; Instance declaration for the TaylorNum to be a part of the Num typeclass
 
@@ -170,7 +169,6 @@
 
 ;; Having some trouble introducing the fractional type because in haskell Fractional is a part of the Num class if im not wrong
 
-
 (struct (t) Floating
   ([pi : (-> t)]
    [exp : (-> t t)]
@@ -186,6 +184,3 @@
    [acosh : (-> t t)]
    [atanh : (-> t t)]))
 
-
-             
-                
