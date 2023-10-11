@@ -1,5 +1,6 @@
 #lang typed/racket
 
+
 (require typed/test-engine/racket-tests)
 (require math/flonum)
 (require racket/flonum)
@@ -149,6 +150,14 @@
    (λ ([a : Flonum])
      (TaylorFromFloat a))))
 
+
+(: TaylorRecip (-> TaylorZ TaylorZ))
+(define (TaylorRecip a)
+    (if (Zero? a)
+        (Taylor +inf.0 (Zero))
+        (Taylor (fl/ 1.0 (f a)) (TaylorMul (TaylorNegate (df a)) (TaylorRecip (TaylorMul a a))))))
+
+   
 (struct (t) Eq
   ([equal : (-> t t Boolean)])
   #:transparent)
@@ -183,4 +192,7 @@
    [asinh : (-> t t)]
    [acosh : (-> t t)]
    [atanh : (-> t t)]))
+
+
+(define x1 (TaylorRecip (Taylor 1.0 (Zero))))
 
