@@ -5,6 +5,8 @@
 (require math/flonum)
 (require racket/flonum)
 
+
+
 ; My Haskell Saviour:
 ; data Taylor x = Zero | Taylor x (Taylor x)   -> | Union types are the saviour 
 
@@ -124,6 +126,14 @@
        [0.0 (Zero)]
        [a (Taylor a (Zero))]))
 
+
+(: TaylorRecip (-> TaylorZ TaylorZ))
+(define (TaylorRecip a)
+  (match a
+    [(Zero) (Taylor +inf.0 (Zero))]
+    [(Taylor x (Zero)) (Taylor (fl/ 1.0 x) (Zero))]
+    [_ (Taylor (fl/ 1.0 (f a)) (TaylorMul (TaylorNegate (df a)) (TaylorRecip (TaylorMul a a))))]))
+
 (struct (t) Num
   ([add : (-> t t t)]
    [mul : (-> t t t)]
@@ -151,11 +161,6 @@
      (TaylorFromFloat a))))
 
 
-(: TaylorRecip (-> TaylorZ TaylorZ))
-(define (TaylorRecip a)
-    (if (Zero? a)
-        (Taylor +inf.0 (Zero))
-        (Taylor (fl/ 1.0 (f a)) (TaylorMul (TaylorNegate (df a)) (TaylorRecip (TaylorMul a a))))))
 
    
 (struct (t) Eq
@@ -194,5 +199,4 @@
    [atanh : (-> t t)]))
 
 
-(define x1 (TaylorRecip (Taylor 1.0 (Zero))))
 
