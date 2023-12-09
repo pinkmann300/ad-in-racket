@@ -1,9 +1,6 @@
 #lang typed/racket
 
 (require math/flonum)
-(require "macros.rkt")
-
-
 
 ; Type classes : A set of operations which are valid over a range of types. For example - Eq type class consists of (==) and (/=). These functions
 ; can only take variables which have can be compared as equal or unequal.
