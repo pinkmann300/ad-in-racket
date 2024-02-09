@@ -1,5 +1,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-} -- This particular language extension has been enabled in Haskell to ensure that a class can take multiple type parameters.
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Redundant bracket" #-}
 {-# HLINT ignore "Redundant lambda" #-}
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use id" #-}
@@ -9,7 +10,7 @@
 -- We define the vocabulary required for writing functions as a category type's instance. Hence, we begin with defining the categories. 
 -- The type parameter k mentioned below will always take 2 parameters for its own type definition. A domain and a codomain type. 
 
--- (a `x` b) definition is just another synonym for tuples
+-- (a `x` b) definition is just another synonym for tuples 
 
 class Category k where
     identity :: a `k` a
@@ -49,19 +50,12 @@ instance Cartesian (->) where
     dup :: a -> (a, a)
     dup = \a -> (a,a)
 
-
-class Category k => Cocartesian k where
-    inl :: a `k` (a, b)
-    inr :: b `k` (a, b)
-    jam :: (a, a) `k` a 
-
 -- Goal :: Construct some functions using the category vocabulary. 
 
 class NumCat k a where 
     negateC :: a `k` a
     addC :: (a , a) `k` a
     mulC :: (a , a) `k` a
-    divC :: (a , a) `k` a
 
 instance Num a => NumCat (->) a where
     negateC :: Num a => a -> a
@@ -70,8 +64,6 @@ instance Num a => NumCat (->) a where
     addC = uncurry (+)  -- f(x,y) = x + y
     mulC :: Num a => (a, a) -> a
     mulC = uncurry (*)
-    divC :: Num a => (a, a) -> a
-    divC = mulC
 
 class FloatCat k a where
     sinC :: a `k` a
@@ -118,39 +110,79 @@ tri :: Cartesian k => k b c -> k b d -> k b (c, d)
 tri f g = composition (cross f g) dup 
 
 -- Examples of functions written in categorical vocabulary
+
 sqr :: Num t => t -> t -- R -> R function
 sqr = composition mulC (tri identity identity)
 
 magSqr :: Num t => (t, t) -> t -- R^2 -> R function
 magSqr = composition addC (tri (composition mulC (tri exl exl)) (composition mulC (tri exr exr)))
 
-cosSinProd :: Floating t => (t, t) -> t
+cosSinProd :: Floating t => (t, t) -> t 
 cosSinProd = composition mulC (composition (tri cosC sinC) mulC)
 
 -- Until here, we can now see numbers which is a good thing.
 
 -- Defining the newtype for differentiable functions itself
--- Making use of the fact that all linear maps are functions themselves at the end of the day.
+-- Making use of the fact that all linear maps are functions
+-- themselves at the end of the day.
 
 -- Since linear maps have different representations, should I just declare them as a type union of 
 -- all the possible forms a linear map could take ?
 
+-- Why is D defined the way it has been defined?
+    -- D is a type which denotes functions but the catch is its a different type of functions we will 
+    -- refer to as "differentiable functions". A function of type D takes an argument from the domain 
+    -- and maps it to a tuple where the first element of the tuple stores the value of the function 
+    -- application to the argument and the second element of the tuple contains the linear map representation 
+    -- that we are working with. 
+
+class Category k => Cocartesian k where
+    inl :: a `k` (a, b)
+    inr :: b `k` (a, b)
+    jam :: (a,a) `k` a
+    
+
 newtype D a b = D (a -> (b, a -> b))
 
-linearD :: (a -> b) -> D a b
-linearD f = D (\a -> (f a, f))
+-- Playing around with functions of the differentiable kind.
 
--- The derivative of a linear function is the function itself.
+type R2r = D Float Float 
+
+fun1 :: R2r
+fun1 = D (\a -> ((composition negateC sqr) a, sqr))
+
+fun2 :: R2r
+fun2 = D (\a -> ((composition negateC identity) a, composition mulC (tri identity identity))) 
+
+stripD :: D a b -> (a -> (b , a -> b))
+stripD (D f) = f
+
+funVal :: D a b -> a -> (b, a -> b)
+funVal f a = (fst ((stripD f) a), (snd ((stripD f) a)))
+
+-- The derivative of a linear function is itself as a linear  
+-- function is the perfect local approximation of itself. 
+linearD :: (a -> b) -> D a b 
+linearD f = D (\a -> (f a, f))
 
 instance Category D where
     identity = linearD identity
     composition (D g) (D f) = D (\a -> let {(b, fdash) = f a; (c, gdash) = g b} in (c, composition gdash fdash))
 
+-- Handles sequential composition above. 
+
 instance Monoidal D where
-    cross (D f) (D g) = D (\(a,b) -> let{(c, fdash) = f a; (d, gdash) = g b} in ((c, d), cross fdash gdash))
+    cross (D f) (D g) = D(\(a,b) -> let{(c,fdash) = f a; (d, gdash) = g b} in ((c,d), cross fdash gdash))
+
+-- Handles parallel composition above.
 
 instance Cartesian D where
     exl = linearD exl
     exr = linearD exr
-    dup = linearD dup
-    
+    dup = linearD dup 
+
+xorWord :: R2r
+xorWord = composition identity (composition fun2 fun1)
+
+-- MY GOAT FUNCTION
+
