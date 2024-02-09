@@ -184,5 +184,4 @@ instance Cartesian D where
 xorWord :: R2r
 xorWord = composition identity (composition fun2 fun1)
 
--- MY GOAT FUNCTION
 
