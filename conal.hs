@@ -5,6 +5,9 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use id" #-}
 {-# HLINT ignore "Use bimap" #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 
 -- The purpose of the current state is to handle functions of the type R -> R (Real to Real) functions. We will set it up using the category based vocabulary.
 -- We define the vocabulary required for writing functions as a category type's instance. Hence, we begin with defining the categories. 
@@ -21,7 +24,7 @@ class Category k where
 
 instance Category (->) where
     identity :: a -> a
-    identity = \a -> a 
+    identity = \a -> a
     composition :: (b -> c) -> (a -> b) -> a -> c
     composition g f = \a -> g (f a)
 
@@ -39,7 +42,7 @@ instance Monoidal (->) where
 
 class Monoidal k => Cartesian k where
     exl :: (a, b) `k` a
-    exr :: (a, b) `k` b 
+    exr :: (a, b) `k` b
     dup :: a `k` (a, a)
 
 instance Cartesian (->) where
@@ -52,7 +55,7 @@ instance Cartesian (->) where
 
 -- Goal :: Construct some functions using the category vocabulary. 
 
-class NumCat k a where 
+class NumCat k a where
     negateC :: a `k` a
     addC :: (a , a) `k` a
     mulC :: (a , a) `k` a
@@ -81,43 +84,29 @@ class FloatCat k a where
 
 
 instance Floating a => FloatCat (->) a where
-    sinC :: Floating a => a -> a
     sinC = sin
-    cosC :: Floating a => a -> a
     cosC = cos
-    asinC :: Floating a => a -> a
     asinC = asin
-    acosC :: Floating a => a -> a
     acosC = acos
-    atanC :: Floating a => a -> a
     atanC = atan
-    sinhC :: Floating a => a -> a
     sinhC = sinh
-    coshC :: Floating a => a -> a
     coshC = cosh
-    asinhC :: Floating a => a -> a
     asinhC = asinh
-    acoshC :: Floating a => a -> a
-    acoshC = acosh 
-    atanhC :: Floating a => a -> a
+    acoshC = acosh
     atanhC = atanh
-    logC :: Floating a => a -> a
     logC = log
-    expC :: Floating a => a -> a
     expC = exp
 
 tri :: Cartesian k => k b c -> k b d -> k b (c, d)
-tri f g = composition (cross f g) dup 
+tri f g = composition (cross f g) dup
 
 -- Examples of functions written in categorical vocabulary
 
-sqr :: Num t => t -> t -- R -> R function
-sqr = composition mulC (tri identity identity)
 
 magSqr :: Num t => (t, t) -> t -- R^2 -> R function
 magSqr = composition addC (tri (composition mulC (tri exl exl)) (composition mulC (tri exr exr)))
 
-cosSinProd :: Floating t => (t, t) -> t 
+cosSinProd :: Floating t => (t, t) -> t
 cosSinProd = composition mulC (composition (tri cosC sinC) mulC)
 
 -- Until here, we can now see numbers which is a good thing.
@@ -137,22 +126,24 @@ cosSinProd = composition mulC (composition (tri cosC sinC) mulC)
     -- that we are working with. 
 
 class Category k => Cocartesian k where
-    inl :: a `k` (a, b)
-    inr :: b `k` (a, b)
-    jam :: (a,a) `k` a
-    
+    inl :: a `k` (Float , Float)
+    inr :: b `k` (Float , Float)
+    jam :: (a,a) `k` Float
+
 
 newtype D a b = D (a -> (b, a -> b))
 
+newtype D1 a b = D1 (a -> b) (D1 a b)
+ 
+
+
+
+
 -- Playing around with functions of the differentiable kind.
 
-type R2r = D Float Float 
+type R2r = D Float Float
 
-fun1 :: R2r
-fun1 = D (\a -> ((composition negateC sqr) a, sqr))
-
-fun2 :: R2r
-fun2 = D (\a -> ((composition negateC identity) a, composition mulC (tri identity identity))) 
+-- D (Float -> (Float, Float -> Float))
 
 stripD :: D a b -> (a -> (b , a -> b))
 stripD (D f) = f
@@ -162,26 +153,30 @@ funVal f a = (fst ((stripD f) a), (snd ((stripD f) a)))
 
 -- The derivative of a linear function is itself as a linear  
 -- function is the perfect local approximation of itself. 
-linearD :: (a -> b) -> D a b 
+linearD :: (a -> b) -> D a b
 linearD f = D (\a -> (f a, f))
 
 instance Category D where
-    identity = linearD identity
+    identity = D (\a -> (identity a, identity))
     composition (D g) (D f) = D (\a -> let {(b, fdash) = f a; (c, gdash) = g b} in (c, composition gdash fdash))
 
 -- Handles sequential composition above. 
-
 instance Monoidal D where
-    cross (D f) (D g) = D(\(a,b) -> let{(c,fdash) = f a; (d, gdash) = g b} in ((c,d), cross fdash gdash))
+    cross (D f) (D g) = D (\(a,b) -> let{(c,fdash) = f a; (d, gdash) = g b} in ((c,d), cross fdash gdash))
 
 -- Handles parallel composition above.
+-- Essentially takes 2 funtions of the differentiable type and returns another differentiable function 
 
 instance Cartesian D where
     exl = linearD exl
     exr = linearD exr
-    dup = linearD dup 
+    dup = linearD dup
 
-xorWord :: R2r
-xorWord = composition identity (composition fun2 fun1)
+sqr2 :: R2r
+sqr2 =  composition addC (tri identity identity)
 
 
+instance Num a => NumCat D a where
+    negateC = linearD negateC
+    addC = linearD addC
+    mulC = 
