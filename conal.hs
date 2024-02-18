@@ -135,26 +135,12 @@ newtype D a b = D (a -> (b, a -> b))
 
 newtype D1 a b = D1 (a -> b) (D1 a b)
  
-
-
-
-
 -- Playing around with functions of the differentiable kind.
 
 type R2r = D Float Float
 
 -- D (Float -> (Float, Float -> Float))
 
-stripD :: D a b -> (a -> (b , a -> b))
-stripD (D f) = f
-
-funVal :: D a b -> a -> (b, a -> b)
-funVal f a = (fst ((stripD f) a), (snd ((stripD f) a)))
-
--- The derivative of a linear function is itself as a linear  
--- function is the perfect local approximation of itself. 
-linearD :: (a -> b) -> D a b
-linearD f = D (\a -> (f a, f))
 
 instance Category D where
     identity = D (\a -> (identity a, identity))

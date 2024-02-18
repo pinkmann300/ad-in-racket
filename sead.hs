@@ -13,7 +13,6 @@ fun (D (f, _ )) = f
 dfun :: D x -> D x
 dfun (D (_, df)) = df
 
-
 -- Special identity function 
 x :: (Real a) => D a   
 x = D (id, 1)
@@ -43,7 +42,6 @@ instance (Fractional n) => Fractional (D n) where
     fromRational a = D (\_ -> fromRational a, 0)
     recip f = D (\x -> 1 / fun f x, (- dfun f / (f * f)))
 
-
 instance (Floating n) => Floating (D n) where
     pi = D (\_ -> pi, 0)
     exp f = D (exp . fun f, dfun f * (exp f))
@@ -56,7 +54,6 @@ instance (Floating n) => Floating (D n) where
     sinh f = D (sinh. fun f, dfun f * cosh f)
     cosh f = D (cosh . fun f, dfun f * sinh f)
     asinh f = D (asinh . fun f, ((dfun f) / sqrt (1 + f * f)))
-    acosh :: Floating n => D n -> D n
     acosh f = D (acosh . fun f, dfun f / sqrt (f * f -1))
     atanh f = D (atanh . fun f, dfun f / (1 + f * f))
 
@@ -70,4 +67,15 @@ fun1 (DE (f, _)) = f
 
 dfun1 :: DE a b -> DE a b
 dfun1 (DE (_, df)) = df
+
+-- Examples of functions written in more than one variable
+
+-- Design decisions - how to decide what dimension the input vector belongs to 
+-- (Treat it as a function on an array and the length of the array will correspond to the dimension
+-- of the function.
+
+
+
+
+
 
