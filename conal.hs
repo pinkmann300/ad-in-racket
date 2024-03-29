@@ -132,15 +132,12 @@ class Category k => Cocartesian k where
 
 
 newtype D a b = D (a -> (b, a -> b))
-
-newtype D1 a b = D1 (a -> b) (D1 a b)
  
 -- Playing around with functions of the differentiable kind.
 
 type R2r = D Float Float
 
 -- D (Float -> (Float, Float -> Float))
-
 
 instance Category D where
     identity = D (\a -> (identity a, identity))
@@ -165,4 +162,7 @@ sqr2 =  composition addC (tri identity identity)
 instance Num a => NumCat D a where
     negateC = linearD negateC
     addC = linearD addC
-    mulC = 
+    mulC = D(\(a,b) -> (a * b, ))
+
+
+

@@ -1,0 +1,55 @@
+#lang racket
+
+;Duplicate function
+(define (dup a)
+  (cons a a))
+
+;Extract right
+(define (exr a)
+  (match a
+    [(cons k m) m]))
+
+;Extract left 
+(define (exl a)
+  (match a
+    [(cons k m) k]))
+
+; Uncurried addition
+(define (un-add m)
+  ((λ
+      (k)
+    (+ (exl k) (exr k))) m))
+
+; Uncurried multiplication
+(define (un-mul m)
+    ((λ
+      (k)
+    (* (exl k) (exr k))) m))
+
+; Scalar multiplication
+(define scale
+  (λ (k)
+    (λ (m)
+      (* k m))))
+
+; Cross functions
+(define cross
+  (λ (k m)
+    (λ (v)
+      (cons (k (exl v)) (m (exr v))))))
+
+; Sequential composition
+(define fun-comp
+  (λ (k m)
+    (λ (v)
+      (k (m v)))))
+
+; Square function 
+(define (sqr k)
+  ((fun-comp un-mul dup) k))
+
+;
+
+
+
+
