@@ -5,14 +5,10 @@ newtype D x = D (x -> x, D x)
 dup :: b -> (b, b)
 dup a = (a, a)
 
-exl :: (a, b) -> a
 exl (a, _) = a
-
-exr :: (a, b) -> b
 exr (_, b) = b
 
--- Makes binary functions a unary function which takes a pair for an input
-scale :: Double -> Double -> Double
+-- Makes binary functions a unary function which takes a pair for an 
 scale = (*)
 
 add :: (Double, Double) -> Double
@@ -28,12 +24,11 @@ cross f g (a, b) = (f a, g b)
 tri :: (t2 -> a) -> (t2 -> b) -> t2 -> (a, b)
 tri f g = cross f g . dup
 
-downtri :: (t1 -> Double) -> (t2 -> Double) -> (t1, t2) -> Double
 downtri f g = add . cross f g
+downtri :: (t1 -> Double) -> (t2 -> Double) -> (t1, t2) -> Double
 
 -- Derivative of a linear function is the function itself.
 
-linearF :: (t -> a) -> t -> (a, t -> a)
 linearF f = \a -> (f a, f)
 
 dIdentity :: a -> (a, a -> a)
@@ -42,10 +37,8 @@ dIdentity = linearF id
 dDup :: t -> ((t, t), t -> (t, t))
 dDup = linearF dup
 
-dExl :: (a, b) -> (a, (a, b) -> a)
 dExl = linearF exl
 
-dExr :: (a1, a2) -> (a2, (a1, a2) -> a2)
 dExr = linearF exr
 
 -- Only unary operation w.r.t to numeric operations and other binary derivatives
@@ -57,21 +50,17 @@ dAdd = linearF add
 
 -- Parallel and Sequential composition of Differential functions
 
-dCross :: (t4 -> (a1, t5 -> a2)) -> (t6 -> (b1, t7 -> b2)) -> (t4, t6) -> ((a1, b1), (t5, t7) -> (a2, b2))
 dCross f g k = ((c, d), cross fdash gdash)
   where
     ((c, fdash), (d, gdash)) = cross f g k
 
-dComp :: (a1 -> (a2, b -> c)) -> (p -> (a1, a3 -> b)) -> p -> (a2, a3 -> c)
 dComp g f a = (c, gdash . fdash)
   where
     (b, fdash) = f a
     (c, gdash) = g b
 
-dMul :: (Double, Double) -> (Double, (Double, Double) -> Double)
 dMul (a, b) = (a * b, downtri (scale a) (scale b))
 
-prodRu :: (t2 -> a) -> (t2 -> Double) -> t2 -> (a, Double -> Double)
 prodRu f fdash = tri f (scale . fdash)
 
 dExp :: Double -> (Double, Double -> Double)
@@ -95,7 +84,6 @@ dAcos = prodRu acos (\x -> recip (sqrt (1 - (x * x))))
 dAtan :: Double -> (Double, Double -> Double)
 dAtan = prodRu atan (\x -> recip (x * x + 1))
 
-dSinh :: Double -> (Double, Double -> Double)
 dSinh = prodRu sinh cosh
 
 dCosh :: Double -> (Double, Double -> Double)

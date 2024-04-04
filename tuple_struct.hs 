@@ -1,0 +1,7 @@
+data Tuple a = Tuple a (Tuple a) | a deriving (Show, Read)
+
+tupLength :: Tuple a -> Integer 
+tupLength (Tuple k (Tuple m)) = 1 + tupLength (Tuple m)
+tupLength x = 1 
+
+
