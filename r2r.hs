@@ -6,46 +6,36 @@ dup :: b -> (b, b)
 dup a = (a, a)
 
 exl (a, _) = a
+
 exr (_, b) = b
 
--- Makes binary functions a unary function which takes a pair for an 
+-- Makes binary functions a unary function which takes a pair for an
 scale = (*)
 
-add :: (Double, Double) -> Double
 add = uncurry (+)
 
-mul :: (Double, Double) -> Double
 mul = uncurry scale
 
--- Parallel composition of functions
-cross :: (t1 -> a) -> (t2 -> b) -> (t1, t2) -> (a, b)
 cross f g (a, b) = (f a, g b)
 
-tri :: (t2 -> a) -> (t2 -> b) -> t2 -> (a, b)
 tri f g = cross f g . dup
 
 downtri f g = add . cross f g
-downtri :: (t1 -> Double) -> (t2 -> Double) -> (t1, t2) -> Double
 
 -- Derivative of a linear function is the function itself.
 
 linearF f = \a -> (f a, f)
 
-dIdentity :: a -> (a, a -> a)
 dIdentity = linearF id
 
-dDup :: t -> ((t, t), t -> (t, t))
 dDup = linearF dup
 
 dExl = linearF exl
 
 dExr = linearF exr
 
--- Only unary operation w.r.t to numeric operations and other binary derivatives
-dNegate :: Integer -> (Integer, Integer -> Integer)
 dNegate = linearF negate
 
-dAdd :: (Double, Double) -> (Double, (Double, Double) -> Double)
 dAdd = linearF add
 
 -- Parallel and Sequential composition of Differential functions
@@ -63,43 +53,30 @@ dMul (a, b) = (a * b, downtri (scale a) (scale b))
 
 prodRu f fdash = tri f (scale . fdash)
 
-dExp :: Double -> (Double, Double -> Double)
 dExp = prodRu exp exp
 
-dLog :: Double -> (Double, Double -> Double)
 dLog = prodRu log recip
 
-dSin :: Double -> (Double, Double -> Double)
 dSin = prodRu sin cos
 
-dCos :: Double -> (Double, Double -> Double)
 dCos = prodRu cos (negate . sin)
 
-dAsin :: Double -> (Double, Double -> Double)
 dAsin = prodRu asin (\x -> recip (sqrt (1 - (x * x))))
 
-dAcos :: Double -> (Double, Double -> Double)
 dAcos = prodRu acos (\x -> recip (sqrt (1 - (x * x))))
 
-dAtan :: Double -> (Double, Double -> Double)
 dAtan = prodRu atan (\x -> recip (x * x + 1))
 
 dSinh = prodRu sinh cosh
 
-dCosh :: Double -> (Double, Double -> Double)
 dCosh = prodRu cosh sinh
 
-dAsinh :: Double -> (Double, Double -> Double)
 dAsinh = prodRu asinh (\x -> recip (sqrt (x * x + 1)))
 
-dAcosh :: Double -> (Double, Double -> Double)
 dAcosh = prodRu acosh (\x -> negate (recip (sqrt (x * x - 1))))
 
-dAtanh :: Double -> (Double, Double -> Double)
 dAtanh = prodRu atanh (\x -> recip (1 - x * x))
 
--- Example functions defined using categorical vocabulary:
-dSqr :: Double -> (Double, Double -> Double)
 dSqr = dComp dMul dDup
 
 --  Reference : https://crypto.stanford.edu/~blynn/haskell/ad.html
@@ -108,6 +85,8 @@ dSqr = dComp dMul dDup
 -- The above needs to be extended for reverse mode automatic differentiation.
 
 rad d a = let (f, f') = d a in (f, (. f'))
+
+-- f in here refers to the value of the function and the
 
 infixr 9 <<.
 
@@ -171,24 +150,31 @@ duaMagSqr = duaBin dAdd <<. dCross (duaBin dMul <<. duaDup) (duaBin dMul <<. dua
 
 f <</-\ g = duaCross f g <<. duaDup
 
+duaxex :: Double -> (Double, Double -> Double)
 duaxex = duaBin dMul <<. (dua dIdentity <</-\ dua dExp)
 
 type Neuron = ([Double], Double)
 
+fire :: (Floating a) => [a] -> ([a], a) -> a
 fire inputs neuron = f $ sum (zipWith (*) inputs weights) + bias
   where
     weights = fst neuron
     bias = snd neuron
     f x = recip $ 1 + exp (-x)
 
+jamList :: [Double] -> Double
 jamList = sum
 
+dJamList :: [Double] -> (Double, [Double] -> Double)
 dJamList = linearF jamList
 
+crossList :: [b -> c] -> [b] -> [c]
 crossList = zipWith id
 
+dCrossList :: [b1 -> (a, b2 -> c)] -> [b1] -> ([a], [b2] -> [c])
 dCrossList f's = cross id crossList . unzip . crossList f's
 
+dScale :: Double -> (Double -> Double, Double -> Double -> Double)
 dScale = linearF scale
 
 sigmoid = recip . add . (cross (const 1) (exp . negate)) . dup
@@ -196,3 +182,7 @@ sigmoid = recip . add . (cross (const 1) (exp . negate)) . dup
 fire' inputs = sigmoid . add . cross (jamList . crossList scaleInputs) id
   where
     scaleInputs = scale <$> inputs
+
+-- RAD without any of the machinery present
+
+dSinCosSqr2 = (((dSin <.) dCos <.) dMul <.) dDup

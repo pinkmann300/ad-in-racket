@@ -1,11 +1,12 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 -- This particular language extension has been enabled in Haskell to ensure that a class can take multiple type parameters.
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
-import Distribution.Simple.Program.HcPkg (list)
+import Distribution.Types.LocalBuildInfo (LocalBuildInfo (compiler))
 
 -- The purpose of the current state is to handle functions of the type R -> R (Real to Real) functions. We will set it up using the category based vocabulary.
 -- We define the vocabulary required for writing functions as a category type's instance. Hence, we begin with defining the categories.
@@ -35,7 +36,6 @@ class (Category k) => Monoidal k where
   cross :: (a `k` c) -> (b `k` d) -> ((a, b) `k` (c, d))
 
 -- Cross function takes two arguments relating two types a and c, and returns a tuple connected relation.
-
 instance Monoidal (->) where
   cross :: (a -> c) -> (b -> d) -> (a, b) -> (c, d)
   cross f g = \(a, b) -> (f a, g b)
@@ -53,9 +53,10 @@ instance Cartesian (->) where
   dup :: a -> (a, a)
   dup = \a -> (a, a)
 
-exln :: Integer -> (Tuple a) -> a
-exln 1 (Cons k m) = k
-exln n (Cons k m) = exln (n - 1) m
+exln :: Integer -> [a] -> a
+exln _ [] = error "Out of bounds"
+exln 1 (x : xs) = x
+exln n (x : xs) = exln (n - 1) xs
 
 -- Goal :: Construct some functions using the category vocabulary.
 
@@ -198,7 +199,7 @@ jamD = uncurry (+)
 instance (Num a) => NumCat D a where
   negateC = linearD negateC
   addC = linearD addC
-  mulC = D (\(a, b) -> (a * b, composition jamD (cross (scaleNum a) (scaleNum b))))
+  mulC = D (\(a, b) -> (a * b, composition jamD (cross (scaleNum b) (scaleNum a))))
 
 instance (Floating a) => FloatCat D a where
   sinC = D (\k -> (sin k, scaleNum (cos k)))
@@ -267,10 +268,10 @@ k n = fromInteger n
 sqrList :: D NumberList NumberList
 sqrList = composition mulC (tri identity identity)
 
-magSqr3 :: D (Tuple Double) Double
+magSqr3 :: D [Double] Double
 magSqr3 = composition mulC (tri (composition mulC (tri (exlD 1) (exlD 2))) (exlD 3))
 
-exlD :: Integer -> D (Tuple b) b
+exlD :: Integer -> D [b] b
 exlD n = linearD (exln n)
 
 sqr :: (Num t) => t -> t
@@ -279,15 +280,13 @@ sqr = composition mulC (tri identity identity)
 mulAb9 :: D (Double, Double) Double
 mulAb9 = composition mulC (tri exl exr)
 
-magSqr :: D (Tuple Double) Double
+magSqr :: D [Double] Double
 magSqr = composition addC (tri (composition mulC (tri (exlD 1) (exlD 1))) (composition mulC (tri (exlD 2) (exlD 2))))
 
-mulAb10 :: D (Tuple Double) Double
+mulAb10 :: D [Double] Double
 mulAb10 = composition mulC (tri (exlD 1) (exlD 2))
 
 -- Convinced in terms of correctness for addition cases.
-
--- Matrix multiplication works.
 
 -- Why are we limited to only the first derivative?
 --  Our entire approach has been changed when we interpret derivatives as linear maps.
@@ -295,8 +294,21 @@ mulAb10 = composition mulC (tri (exlD 1) (exlD 2))
 --  is the linear map itself. Hence, if we try to compute the second derivative as
 
 -- Doubt case : magSqr3 = x * y * z
---              k = (stripD magSqr3 (Cons 2.0 (Cons 3.0 (Cons 4.0 Empty))))
+--              k = (stripD magSqr3) [2.0,3.0,4.0] -- Works correctly
 --              fst k = 24.0 - Function value
---              (snd k) (Cons 1.0 (Cons 0.0 (Cons 0.0 Empty))) = 12.0 - Partial derivative w.r.t x
---              (snd k) (Cons 0.0 (Cons 1.0 (Cons 0.0 Empty))) = 18.0 - Incorrect ?
---              (snd k) (Cons 0.0 (Cons 1.0 (Cons 0.0 Empty))) = 4.0 - Incorrect ?
+--              (snd k) [1.0,0.0,0.0] = 12.0
+--              (snd k) [0.0,1.0,0.0] = 8.0
+--              (snd k) [0.0,0.0,1.0] = 4.0
+
+-- However, 2 element functions with Tuple structure and the (Double, Double) functions yield the same result in terms
+-- of numerical value. Hence, wondering if this constructing is correct or not.
+
+-- Want to verify the correctness of the specification with respect to
+
+-- Amending existing Tuple structure to resemble lists since they both have the same definition.
+join k = composition addC (uncurry tri k)
+
+unjoin :: (Cocartesian k) => k (a, b) c -> (k a c, k b c)
+unjoin h = (composition h inl, composition h inr)
+
+-- The RAD implementation begins from here.
