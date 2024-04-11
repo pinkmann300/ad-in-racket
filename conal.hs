@@ -6,7 +6,7 @@
 -- This particular language extension has been enabled in Haskell to ensure that a class can take multiple type parameters.
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
-import Distribution.Types.LocalBuildInfo (LocalBuildInfo (compiler))
+import Data.Matrix
 
 -- The purpose of the current state is to handle functions of the type R -> R (Real to Real) functions. We will set it up using the category based vocabulary.
 -- We define the vocabulary required for writing functions as a category type's instance. Hence, we begin with defining the categories.
@@ -177,11 +177,14 @@ newtype D a b = D (a -> (b, a -> b))
 
 -- Handles sequential composition above for differentiable functions
 instance Category D where
-  identity = D (\a -> (identity a, identity))
+  identity :: D a a
+  identity = D (\a -> (Main.identity a, Main.identity))
+  composition :: D b c -> D a b -> D a c
   composition (D g) (D f) = D (\a -> let (b, fdash) = f a; (c, gdash) = g b in (c, composition gdash fdash))
 
 -- Handles parallel composition above.
 instance Monoidal D where
+  cross :: D a c -> D b d -> D (a, b) (c, d)
   cross (D f) (D g) = D (\(a, b) -> let (c, fdash) = f a; (d, gdash) = g b in ((c, d), cross fdash gdash))
 
 -- Essentially takes 2 funtions of the differentiable type and returns another differentiable function
@@ -197,7 +200,9 @@ jamD :: (Num t) => (t, t) -> t
 jamD = uncurry (+)
 
 instance (Num a) => NumCat D a where
+  negateC :: (Num a) => D a a
   negateC = linearD negateC
+  addC :: (Num a) => D (a, a) a
   addC = linearD addC
   mulC = D (\(a, b) -> (a * b, composition jamD (cross (scaleNum b) (scaleNum a))))
 
@@ -223,13 +228,13 @@ mulAb :: D (Double, Double) Double
 mulAb = composition mulC (tri exl exr)
 
 cube :: (Num t) => D t t
-cube = composition mulC (tri identity (composition mulC (tri identity identity)))
+cube = composition mulC (tri (Main.identity) (composition mulC (tri (Main.identity Main.identity))))
 
 sqr2 :: D Double Double
-sqr2 = composition addC (tri identity identity)
+sqr2 = composition addC (tri (Main.identity Main.identity))
 
 sqr3 :: (Num t) => t -> t
-sqr3 = composition mulC (tri identity identity)
+sqr3 = composition mulC (tri Main.identity Main.identity)
 
 -- magSqr :: (Num t) => (t, t) -> t -- R^2 -> R function
 -- magSqr = composition addC (tri (composition mulC (tri exl exl)) (composition mulC (tri exr exr)))
@@ -243,6 +248,10 @@ data Tuple a = Cons a (Tuple a) | Empty
 tupLength :: Tuple a -> Integer
 tupLength (Cons k m) = 1 + tupLength m
 tupLength Empty = 0
+
+exlD :: Integer -> D [b] b
+exlD n = linearD (exln n)
+
 
 -- Examples:
 -- h = (stripD magSqr2) (2.0,3.0)
@@ -265,50 +274,97 @@ jamF = uncurry (+)
 k :: Integer -> NumberList
 k n = fromInteger n
 
-sqrList :: D NumberList NumberList
-sqrList = composition mulC (tri identity identity)
+-- sqrList :: D NumberList NumberList
+-- sqrList = composition mulC (tri identity identity)
 
-magSqr3 :: D [Double] Double
-magSqr3 = composition mulC (tri (composition mulC (tri (exlD 1) (exlD 2))) (exlD 3))
+-- magSqr3 :: D [Double] Double
+-- magSqr3 = composition mulC (tri (composition mulC (tri (exlD 1) (exlD 2))) (exlD 3))
 
-exlD :: Integer -> D [b] b
-exlD n = linearD (exln n)
 
-sqr :: (Num t) => t -> t
-sqr = composition mulC (tri identity identity)
+-- sqr :: (Num t) => t -> t
+-- sqr = composition mulC (tri identity identity)
 
-mulAb9 :: D (Double, Double) Double
-mulAb9 = composition mulC (tri exl exr)
+-- mulAb9 :: D (Double, Double) Double
+-- mulAb9 = composition mulC (tri exl exr)
 
-magSqr :: D [Double] Double
-magSqr = composition addC (tri (composition mulC (tri (exlD 1) (exlD 1))) (composition mulC (tri (exlD 2) (exlD 2))))
+-- magSqr :: D [Double] Double
+-- magSqr = composition addC (tri (composition mulC (tri (exlD 1) (exlD 1))) (composition mulC (tri (exlD 2) (exlD 2))))
 
-mulAb10 :: D [Double] Double
-mulAb10 = composition mulC (tri (exlD 1) (exlD 2))
+-- mulAb10 :: D [Double] Double
+-- mulAb10 = composition mulC (tri (exlD 1) (exlD 2))
 
 -- Convinced in terms of correctness for addition cases.
 
--- Why are we limited to only the first derivative?
---  Our entire approach has been changed when we interpret derivatives as linear maps.
---  The critical theorem which we use as for saying that the derivative of a linear map
---  is the linear map itself. Hence, if we try to compute the second derivative as
-
--- Doubt case : magSqr3 = x * y * z
---              k = (stripD magSqr3) [2.0,3.0,4.0] -- Works correctly
---              fst k = 24.0 - Function value
---              (snd k) [1.0,0.0,0.0] = 12.0
---              (snd k) [0.0,1.0,0.0] = 8.0
---              (snd k) [0.0,0.0,1.0] = 4.0
-
--- However, 2 element functions with Tuple structure and the (Double, Double) functions yield the same result in terms
--- of numerical value. Hence, wondering if this constructing is correct or not.
-
--- Want to verify the correctness of the specification with respect to
-
 -- Amending existing Tuple structure to resemble lists since they both have the same definition.
+
+join :: (NumCat k c, Cartesian k) => (k a c, k a c) -> k a c
 join k = composition addC (uncurry tri k)
 
 unjoin :: (Cocartesian k) => k (a, b) c -> (k a c, k b c)
 unjoin h = (composition h inl, composition h inr)
 
 -- The RAD implementation begins from here.
+
+newtype Jacobian m n = Jacobian (m -> (n, Matrix Double))
+
+instance Category Jacobian where
+  identity = Jacobian (\a -> (Data.Matrix.identity a, Data.Matrix.identity))
+
+  composition :: Jacobian b c -> Jacobian a b -> Jacobian a c
+  composition (Jacobian g) (Jacobian f) =
+    Jacobian
+      ( \a ->
+          let (b, df) = f a
+              (c, dg) = g b
+              jac = dg * df
+           in (c, jac)
+      )
+
+instance Monoidal Jacobian where
+  cross :: Jacobian a c -> Jacobian b d -> Jacobian (a, b) (c, d)
+  cross (Jacobian f) (Jacobian g) =
+    Jacobian
+      ( \(a, b) ->
+          let (c, df) = f a
+              (d, dg) = g b
+              jac = fromBlocks [[df, zero (nRows df) (nCols dg)], [zero (nRows dg) (nCols df), dg]]
+           in ((c, d), jac)
+      )
+
+-- | Concatenate matrices into a block matrix.
+fromBlocks :: [[Matrix a]] -> Matrix a
+fromBlocks blocks =
+  let numColsInFirstRow = sum $ map (ncols . head) blocks
+      numRows = sum $ map nrows (head blocks)
+      blocks' = concatMap (map toLists) (toLists blocks)
+  in fromLists blocks' `submatrix` (1, 1) (numRows, numColsInFirstRow)
+
+
+instance Cartesian Jacobian where
+  exl :: Jacobian (a, b) a
+  exl = Jacobian (\(a, _) -> (a, Data.Matrix.identity a))
+
+  exr :: Jacobian (a, b) b
+  exr = Jacobian (\(_, b) -> (b, Data.Matrix.identity b))
+
+  dup :: Jacobian a (a, a)
+  dup =
+    Jacobian
+      ( \a ->
+          let jac = fromBlocks [[Data.Matrix.identity a, Data.Matrix.identity a]]
+           in ((a, a), jac)
+      )
+
+instance Show (Jacobian m n) where
+  show (Jacobian f) = showJac f
+
+showJac :: (m -> (n, Matrix Double)) -> String
+showJac f = "Jacobian Function:\n" ++ show mat
+  where
+    (_, mat) = f undefined
+
+exampleJacobian :: Jacobian Integer Integer
+exampleJacobian = Jacobian (\(x, y) -> ((x + y, x * y, x - y), fromLists [[1, 1], [y, x], [1, -1]]))
+
+main :: IO ()
+main = putStrLn (show exampleJacobian)
