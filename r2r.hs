@@ -8,6 +8,8 @@ exl (a, _) = a
 exr :: (a, b) -> b
 exr (_, b) = b
 
+zero = \a -> 0
+
 scale :: (Num t) => t -> t -> t
 -- Makes binary functions a unary function which takes a pair for an
 scale = (*)
@@ -137,15 +139,14 @@ rad f a = let (fval, f') = f a in (fval, (. f'))
 
 -- f0.g0 :: ? Type computation doubt
 
-inl a = (a, 0)
-
-inr b = (0, b)
 
 
 jam = uncurry (+)
-
 join (f, g) = jam . cross f g
 unjoin h = (h . inl, h . inr)
+inl a = (a, 0)
+inr b = (0, b)
+
 
 --radCross :: (Num c1, Num b1, Num a1) => (t4 -> (a2, (a1 -> c2) -> t5 -> c1)) -> (t6 -> (b2, (b1 -> c2) -> t7 -> c1)) -> (t4, t6) -> ((a2, b2), ((a1, b1) -> c2) -> (t5, t7) -> c1)
 --radCross :: (fin -> (fout , fin -> fout)) -> (gin -> (gout, gin -> gout)) -> (fin, gin) -> ((fout, gout), ()
