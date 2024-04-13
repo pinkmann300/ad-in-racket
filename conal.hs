@@ -5,6 +5,8 @@
 {-# LANGUAGE UndecidableInstances #-}
 -- This particular language extension has been enabled in Haskell to ensure that a class can take multiple type parameters.
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+import qualified Control.Applicative as function
+{-# HLINT ignore "Eta reduce" #-}
 
 -- The purpose of the current state is to handle functions of the type R -> R (Real to Real) functions. We will set it up using the category based vocabulary.
 -- We define the vocabulary required for writing functions as a category type's instance. Hence, we begin with defining the categories.
@@ -260,6 +262,8 @@ inrF b = (0, b)
 jamF :: (Num a) => (a, a) -> a
 jamF = uncurry (+)
 
+-- xyzProd works fine as a function and when supplied with derivatives 
+xyzProd :: D [Integer] Integer
 xyzProd = composition mulC (tri (exlD 3) (composition mulC (tri (exlD 1) (exlD 2))))
 
 k :: Integer -> NumberList
@@ -271,4 +275,24 @@ join k = composition addC (uncurry tri k)
 unjoin :: (Cocartesian k) => k (a, b) c -> (k a c, k b c)
 unjoin h = (composition h inl, composition h inr)
 
+rmToRn = [composition mulC (tri (exln 2) (exln 1)) , composition mulC (tri (exln 1 ) (exln 2)) ]
+
+applyFunList :: t -> [t -> a] -> [a]
+applyFunList k xs = map (\ x -> x k) xs
+
+-- ApplyFunList essentially allows you to apply the arguments provided in a list to be applied to the 
+-- individual components in the function 
+
+-- With this, we have a mechanism for defining functions of the type R^n -> R^m 
+
 -- Examples of R^n -> R function types
+
+type Vector = [Double]
+
+-- Define a function that takes a 3-dimensional vector as input
+-- and produces a 2-dimensional vector as output
+f :: Vector -> Vector
+f [x, y, z] = [x + y, y - z]  -- Example function definition
+
+-- Example usage:
+-- f [1.0, 2.0, 3.0] returns [3.0, -1.0]
