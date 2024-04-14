@@ -13,7 +13,7 @@ import qualified Control.Arrow as Control
 
 class Category k where
   identity :: a `k` a
-  composition :: (b `k` c) -> (a `k` b) -> (a `k` c)
+  composition :: (b `k` l) -> (a `k` b) -> (a `k` l)
 
 instance Category (->) where
   identity :: a -> a
@@ -52,10 +52,15 @@ instance Category D where
 
 instance Monoidal D where
   cross :: D a c -> D b d -> D (a, b) (c, d)
-  cross (D f) (D g) = D (\(a, b) -> let (c, f') = f a; (d, g') = g b; in cross f' g')
+  cross (D f) (D g) = D (\(a, b) -> let (fa, fa') = f a; (gb, gb') = g b in ((fa,gb), join . cross fa' gb' . unjoin))
 
-join :: Num c => (a -> c, b -> c) -> (a, b) -> c
+
+join :: Num c => (a -> c, b -> c) -> (a, b) -> c 
 join (f, g) (a, b) = f a + g b
+
+inl = \a -> (a, 0.0)
+inr = \a -> (0.0, b)
+unjoin h = (h . inl , h . inr )
 
 dot = (*)
 undot = ($ 1)
