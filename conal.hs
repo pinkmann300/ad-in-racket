@@ -25,9 +25,9 @@ class Category k where
 
 instance Category (->) where
   identity :: a -> a
-  identity = \a -> a
   composition :: (b -> c) -> (a -> b) -> a -> c
-  composition g f = \a -> g (f a)
+  identity a = a
+  composition g f a = g (f a)
 
 -- The above defines functions as an instance of the category. The identity of a value passed to a function is
 -- the function itself and the composition of two functions g and f will be g(f a) for some arbitrary a.
@@ -38,7 +38,7 @@ class (Category k) => Monoidal k where
 -- Cross function takes two arguments relating two types a and c, and returns a tuple connected relation.
 instance Monoidal (->) where
   cross :: (a -> c) -> (b -> d) -> (a, b) -> (c, d)
-  cross f g = \(a, b) -> (f a, g b)
+  cross f g (a, b) = (f a, g b)
 
 class (Monoidal k) => Cartesian k where
   exl :: (a, b) `k` a
@@ -51,7 +51,7 @@ instance Cartesian (->) where
   exr :: (a, b) -> b
   exr = snd
   dup :: a -> (a, a)
-  dup = \a -> (a, a)
+  dup a = (a, a)
 
 exln :: Integer -> [a] -> a
 exln _ [] = error "Out of bounds"
@@ -85,11 +85,11 @@ instance Num NumberList where
 -- The uncurry function essentially allows us to
 
 listAdd :: (Num a) => [a] -> [a] -> [a]
-listAdd (x : xs) (y : ys) = [x + y] ++ (listAdd xs ys)
+listAdd (x : xs) (y : ys) = (x + y) : listAdd xs ys
 listAdd [] [] = []
 
 negateL :: (Num a) => [a] -> [a]
-negateL (xs) = map negate xs
+negateL xs = map negate xs
 
 scalarMul :: (Num a) => a -> [a] -> [a]
 scalarMul k = map (* k)
@@ -98,7 +98,7 @@ dotProd :: (Num a) => [a] -> [a] -> [a]
 dotProd [] [] = []
 dotProd xs [] = []
 dotProd [] xs = []
-dotProd (x : xs) (y : ys) = [x * y] ++ dotProd xs ys
+dotProd (x : xs) (y : ys) = (x * y) : dotProd xs ys
 
 class FloatCat k a where
   sinC :: a `k` a
@@ -292,8 +292,6 @@ generateVector i n = [if j == i - 1 then 1 else 0 | j <- [0 .. n - 1]]
 -- generateVector 1 3 returns [1,0,0]
 -- generateVector 2 3 returns [0,1,0]
 -- generateVector 3 3 returns [0,0,1]
-  
-
 
 -- ApplyFunList essentially allows you to apply the arguments provided in a list to be applied to the
 -- individual components in the function
@@ -301,7 +299,6 @@ generateVector i n = [if j == i - 1 then 1 else 0 | j <- [0 .. n - 1]]
 -- With this, we have a mechanism for defining functions of the type R^n -> R^m
 
 -- Examples of R^n -> R function types
-
 
 -- Define a function that takes a 3-dimensional vector as input
 -- and produces a 2-dimensional vector as output

@@ -55,15 +55,5 @@ instance Monoidal D where
   cross (D f) (D g) = D (\(a, b) -> let (fa, fa') = f a; (gb, gb') = g b in ((fa,gb), join . cross fa' gb' . unjoin))
 
 
-join :: Num c => (a -> c, b -> c) -> (a, b) -> c 
+join :: Num c => (a -> c, b -> c) -> (a, b) -> c
 join (f, g) (a, b) = f a + g b
-
-inl = \a -> (a, 0.0)
-inr = \a -> (0.0, b)
-unjoin h = (h . inl , h . inr )
-
-dot = (*)
-undot = ($ 1)
-dot2 (u, v) = uncurry (+) . (cross (dot u) (dot v))
-undot2 :: (Num a, Num b1) => ((a, b1) -> b2) -> (b2, b2)
-undot2 f = (f (1, 0), f (0, 1))
