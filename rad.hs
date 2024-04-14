@@ -52,8 +52,16 @@ instance Category D where
 
 instance Monoidal D where
   cross :: D a c -> D b d -> D (a, b) (c, d)
-  cross (D f) (D g) = D (\(a, b) -> let (fa, fa') = f a; (gb, gb') = g b in ((fa,gb), join . cross fa' gb' . unjoin))
+  cross (D f) (D g) = D (\(a, b) -> let (fa, fa') = f a; (gb, gb') = g b in ((fa,gb), join . cross fa' gb' . jin))
 
 
 join :: Num c => (a -> c, b -> c) -> (a, b) -> c
 join (f, g) (a, b) = f a + g b
+
+
+unjoin h = (h . inl , h . inr)
+
+jin h = (h (1 ,0), h (0,1)) 
+
+inl = \a -> (a, 0)
+inr = \a -> (0, a)
