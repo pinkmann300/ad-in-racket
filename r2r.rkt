@@ -108,7 +108,6 @@
 (define (dConst n)
   (cons n zero))
 
-
 ; Parallel composition of differentiable functions 
 (define (dCross f g)
   (λ (k)
@@ -134,7 +133,8 @@
 ; Working and tested with sample values as well
 ; Non linear primitives will be defined from here on
 
-; Main product rule 
+; Main product rule
+
 (define (prodRu f1 f2)
   (delta f1 (fun-comp scale f2)))
 
@@ -186,5 +186,74 @@
          (scale (* b (expt a (- b 1))))
          (scale (* (log a) (expt a b))))))
 
+(define dMagSqr
+  (dComp dAdd
+         (dCross dSqr dSqr)))
 
+(define (ddelta f g)
+  (dComp (dCross f g) dDup))
 
+(define dSqr2
+  (dComp dMul (ddelta dId dId)))
+
+;magSqr2 :: D (Double, Double) Double
+;magSqr2 = composition addC (tri (composition mulC (tri exl exl)) (composition mulC (tri exr exr)))
+
+(define (dExln n)
+  (λ (k)
+    (cons (exln n k) (λ (m) (exln n m)))))
+
+(define dMagSqr2
+  (dComp dAdd (ddelta (dComp dMul (ddelta (dExln 1) (dExln 1))) (dComp dMul (ddelta (dExln 2) (dExln 2))))))
+
+(define (exln n xs)
+  (if (and (eq? n 1) (not (null? xs)))
+      (car xs)
+      (exln (- n 1) (rest xs))))
+
+; Simple forward mode implementation ends here.
+
+; Reverse Mode AD begins from here on
+
+(define (rad d)
+  (λ (a)
+    (let ([k (d a)])
+      (cons (car k) (λ
+                      (n)
+                    (fun-comp n (cdr k)))))))
+
+(define (radComp g f)
+  (λ (a)
+    (let* ([fa1 (f a)]
+          [gb1 (g (car fa1))]
+          [fda (cdr fa1)]
+          [gda (cdr gb1)])
+      (cons (car gb1) (fun-comp fda gda)))))
+
+(define radSqr
+  (radComp (rad dMul) (rad dDup)))
+
+(define inl
+  (λ (a)
+  (cons a 0)))
+
+(define inr
+  (λ (a)
+    (cons 0 a)))
+
+(define (join k)
+  (fun-comp un-add (cross (car k) (cdr k))))
+
+(define (unjoin h)
+  (cons (fun-comp h inl) (fun-comp h inr)))
+
+(define (radCross f g)
+  (λ (ab)
+    (let* ([n (cross f g ab)]
+           [c (car (car n))]
+           [fda (cdr (car n))]
+           [d (car (cdr n))]
+           [gda (cdr (cdr n))])
+      (cons (cons c d) (fun-comp join (fun-comp (cross fda gda) unjoin))))))
+
+(define 
