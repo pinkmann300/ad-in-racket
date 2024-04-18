@@ -7,7 +7,6 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Eta reduce" #-}
-
 -- The purpose of the current state is to handle functions of the type R -> R (Real to Real) functions. We will set it up using the category based vocabulary.
 -- We define the vocabulary required for writing functions as a category type's instance. Hence, we begin with defining the categories.
 -- The type parameter k mentioned below will always take 2 parameters for its own type definition. A domain and a codomain type.
@@ -305,3 +304,5 @@ generateVector i n = [if j == i - 1 then 1 else 0 | j <- [0 .. n - 1]]
 
 -- Example usage:
 -- f [1.0, 2.0, 3.0] returns [3.0, -1.0]
+
+

@@ -1,0 +1,22 @@
+#lang racket
+
+; The below is an implementation of an Automatic Differentiation system
+; without any type enforcements. The below has taken inspiration from
+; https://crypto.stanford.edu/~blynn/haskell/ad.html
+
+
+; We begin by defining a structure to store the function value and the
+; value of the derivative itself.
+
+(struct pair1 (fx fdx))
+
+; fx denotes the value of the function at point x and
+; fdx denotes the linear map that represents the derivative of f at x.
+
+
+(define (exl (pair1 x y)
+             x))
+
+(define (exr (pair x y)
+             y))
+

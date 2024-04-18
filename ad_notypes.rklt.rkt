@@ -2,7 +2,7 @@
 (require math/base)
 
 ; The below is an implementation of an Automatic Differentiation system
-; without any type enforcements. The below has taken inspiration from
+; without any type enforcements. The code below has taken inspiration from
 ; https://crypto.stanford.edu/~blynn/haskell/ad.html
 
 ; The below system works only for systems of type R -> R and does not
@@ -27,22 +27,24 @@
 ; https://github.com/pinkmann300/ad-in-racket/blob/main/conal.hs
 (define (exl k)
   (match k
-    [(tuple x y) x]))
+    [(cons x y) x]))
 
 (define (exr k)
   (match k
-    [(tuple x y) y]))
+    [(cons x y) y]))
 
 (define (dup n)
-  (tuple n n))
+  (cons n n))
 
-(define (uncurr-add k)
-  (match k
-    [(tuple x y) (+ x y)]))
+(define uncurr-add
+  (λ (k)
+    (match k
+      [(cons x y) (+ x y)])))
 
-(define (uncurr-mul k)
-  (match k
-    [(tuple x y) (* x y)]))
+(define uncurr-mul
+  (λ (k)
+    (match k
+      [(cons x y) (* x y)])))
 
 ; Will define the scale function to only be multiplication 
 ; since we are handling cases of R -> R functions
@@ -54,12 +56,12 @@
 (define (cross f g)
   (λ (k)
     (match k
-      [(tuple x y) (tuple (f x) (g y))])))
+      [(cons x y) (cons (f x) (g y))])))
 
 ; We now define the D instances for the functions.
 (define (linearD f)
   (λ (a)
-    (tuple (f a) f)))
+    (cons (f a) f)))
 
 (define dIdentity
   (linearD identity))
@@ -81,15 +83,18 @@
   (linearD uncurr-add))
 
 (define (dConst n k)
-  (tuple n 0))
+  (cons n 0))
 
 (define (tri f g)
   (compose (cross f g) dup))
 
 (define (dtri f g)
-  (dComp (dCross f g) dDup))
+  (compose (cross f g) dup))
 
 (define (downtri f g)
+  (compose uncurr-add (cross f g)))
+
+(define (dDowntri f g)
   (dComp dAdd (dCross f g)))
 
 ; The Monoidal category instance for differentiable functions
@@ -98,14 +103,13 @@
 
 (define (dCross f g)
   (λ (k)
-    
   (let* ([result ((cross f g) k)])
     (let
-        ([c (tuple-fx (tuple-fx result))]
-         [d (tuple-fx (tuple-fdx result))]
-         [fdash (tuple-fdx (tuple-fx result))]
-         [gdash (tuple-fdx (tuple-fdx result))])
-      (tuple (tuple c d) (cross fdash gdash))))))
+        ([c (car (car result))]
+         [d (car (cdr result))]
+         [fdash (cdr (car result))]
+         [gdash (cdr (cdr result))])
+      (cons (cons c d) (cross fdash gdash))))))
 
 ; The Category composition instance for differentiable 
 ; functions will be taken care of by the dComp function.
@@ -114,9 +118,9 @@
   (λ (k)
     (let* ([fa (f k)]
            [gb (g fa)])
-      (tuple
-       (tuple-fx gb)
-       (compose (tuple-fdx gb) (tuple-fdx fa))))))
+      (cons
+       (car gb)
+       (compose (cdr gb) (cdr fa))))))
 
 ;Unlike addition and negation, the differentiation rule is
 ;a little more involved for multiplication when it comes to
@@ -125,12 +129,10 @@
 (define (negate k)
   (- k))
 
-(define (dMul k)
-  (match k
-   [(tuple x y)
-    (tuple (* (tuple-fx x) (tuple-fdx x))
-           (downtri (scale (tuple-fdx x)) (scale (tuple-fx x))))]))
-     
+(define dMul
+  (λ (k)
+    (match k
+      [(cons (cons x y) f) (cons (* x y) (downtri (scale y) (scale x)))])))
 
 (define (prodRu f fdash)
   (tri f (compose scale fdash)))
@@ -202,6 +204,5 @@
             (scale (* b (expt a (- b 1))))
             (scale (* (log a) (expt a b)))))))
 
-(define dSqr 
+(define dSqr2
   (dComp dMul dDup))
-
