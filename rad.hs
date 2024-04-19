@@ -9,6 +9,8 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 import Control.Arrow qualified as Control
+import GHC.Arr 
+import Data.Ix
 
 -- Add more instances for other types as needed
 
@@ -23,7 +25,7 @@ instance Category (->) where
   composition g f = g . f
 
 class (Category k) => Monoidal k where
-  cross :: forall a b d c. (a `k` c) -> (b `k` d) -> ((a, b) `k` (c, d))
+  cross :: (a `k` c) -> (b `k` d) -> ((a, b) `k` (c, d))
 
 class (Monoidal k) => Cartesian k where
   exl :: (a, b) `k` a
@@ -148,6 +150,11 @@ exln n (x : xs) = exln (n - 1) xs
 exlD :: Integer -> D [b] b
 exlD n = linearD (exln n) 
 
+leftinD :: (Num a, Ix i) => i -> D (Array i a) a
+leftinD n = linearD (leftin n)
+
+leftin :: (Num a, Ix i) => i -> Array i a -> a
+leftin n xs = xs ! n
 
 -- Test functions 
 

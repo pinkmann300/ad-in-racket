@@ -8,6 +8,7 @@
 
 {-# HLINT ignore "Eta reduce" #-}
 {-# HLINT ignore "Use camelCase" #-}
+
 import Data.Ix
 import GHC.Arr
 
@@ -61,8 +62,9 @@ exln _ [] = error "Out of bounds"
 exln 1 (x : xs) = x
 exln n (x : xs) = exln (n - 1) xs
 
-leftin :: (Num a, Ix i) => i -> Array i a -> a 
-leftin n xs = xs ! n 
+leftin :: (Num a, Ix i) => i -> Array i a -> a
+leftin n xs = xs ! n
+
 -- Goal :: Construct some functions using the category vocabulary.
 
 class NumCat k a where
@@ -255,7 +257,7 @@ tupLength Empty = 0
 exlD :: Integer -> D [b] b
 exlD n = linearD (exln n)
 
-leftinD ::(Num a, Ix i) =>  i -> D (Array i a) a 
+leftinD :: (Num a, Ix i) => i -> D (Array i a) a
 leftinD n = linearD (leftin n)
 
 cosSinProd :: (Floating t) => (t, t) -> t
@@ -314,7 +316,8 @@ generateVector i n = [if j == i - 1 then 1 else 0 | j <- [0 .. n - 1]]
 -- Example usage:
 -- f [1.0, 2.0, 3.0] returns [3.0, -1.0]
 
-a = array (1, 4) [(1, 2),(2,3), (3,4),(4,5)]
+a = array (1, 4) [(1, 2), (2, 3), (3, 4), (4, 5)]
 
-xyzProd :: (Num a, Ix i, Num i) => D (Array i a) a 
+xyzProd :: (Num a, Ix i, Num i) => D (Array i a) a
 xyzProd = composition mulC (tri (leftinD 3) (composition mulC (tri (leftinD 1) (leftinD 2))))
+
