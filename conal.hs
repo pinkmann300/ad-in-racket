@@ -7,6 +7,10 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Eta reduce" #-}
+{-# HLINT ignore "Use camelCase" #-}
+import Data.Ix
+import GHC.Arr
+
 -- The purpose of the current state is to handle functions of the type R -> R (Real to Real) functions. We will set it up using the category based vocabulary.
 -- We define the vocabulary required for writing functions as a category type's instance. Hence, we begin with defining the categories.
 -- The type parameter k mentioned below will always take 2 parameters for its own type definition. A domain and a codomain type.
@@ -57,6 +61,8 @@ exln _ [] = error "Out of bounds"
 exln 1 (x : xs) = x
 exln n (x : xs) = exln (n - 1) xs
 
+leftin :: (Num a, Ix i) => i -> Array i a -> a 
+leftin n xs = xs ! n 
 -- Goal :: Construct some functions using the category vocabulary.
 
 class NumCat k a where
@@ -249,6 +255,9 @@ tupLength Empty = 0
 exlD :: Integer -> D [b] b
 exlD n = linearD (exln n)
 
+leftinD ::(Num a, Ix i) =>  i -> D (Array i a) a 
+leftinD n = linearD (leftin n)
+
 cosSinProd :: (Floating t) => (t, t) -> t
 cosSinProd = composition mulC (composition (tri cosC sinC) mulC)
 
@@ -262,8 +271,8 @@ jamF :: (Num a) => (a, a) -> a
 jamF = uncurry (+)
 
 -- xyzProd works fine as a function and when supplied with derivatives
-xyzProd :: D [Integer] Integer
-xyzProd = composition mulC (tri (exlD 3) (composition mulC (tri (exlD 1) (exlD 2))))
+-- xyzProd :: D [Integer] Integer
+-- xyzProd = composition mulC (tri (exlD 3) (composition mulC (tri (exlD 1) (exlD 2))))
 
 k :: Integer -> NumberList
 k n = fromInteger n
@@ -305,4 +314,7 @@ generateVector i n = [if j == i - 1 then 1 else 0 | j <- [0 .. n - 1]]
 -- Example usage:
 -- f [1.0, 2.0, 3.0] returns [3.0, -1.0]
 
+a = array (1, 4) [(1, 2),(2,3), (3,4),(4,5)]
 
+xyzProd :: (Num a, Ix i, Num i) => D (Array i a) a 
+xyzProd = composition mulC (tri (leftinD 3) (composition mulC (tri (leftinD 1) (leftinD 2))))
