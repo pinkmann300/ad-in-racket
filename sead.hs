@@ -1,8 +1,7 @@
 -- An attempt at R^m -> R^n functions
 
-import Data.Functor.Classes (Eq1 (liftEq))
 import Data.Ix
-import GHC.Arr 
+import GHC.Arr
 
 class Category k where
   identity :: a `k` a
@@ -54,3 +53,22 @@ stripD (D f) = f
 
 -- a :: (Num n, Num i) => Array i n 
 -- a = (array (1, 4) [(1, 2), (2, 3), (3, 4), (4, 5)])
+
+arrayAdd :: (Num a, Ix i) => Array i a -> Array i a -> Array i a
+arrayAdd a b = if bounds a == bounds b then array (bounds a) [(i, a!i + b!i) | i <- range (bounds a)] else error "Not compatible for addition"
+
+scalarMultiply :: (Num a, Ix i) => a -> Array i a -> Array i a
+scalarMultiply scalar = fmap (* scalar)
+
+arrayNegate :: (Num a, Ix i) =>  Array i a -> Array i a
+arrayNegate = scalarMultiply (-1)
+
+instance (Num a, Ix i, Num i) => Num (Array i a) where
+  (+) = arrayAdd
+  (*) = arrayAdd
+  abs = fmap abs
+  signum = fmap signum
+  fromInteger n = array (1, 1) [(1,fromInteger n)]
+  negate = scalarMultiply (-1)
+
+-- Num instance of arrays covered. 
