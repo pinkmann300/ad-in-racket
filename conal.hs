@@ -239,7 +239,7 @@ cube :: (Num t) => D t t
 cube = composition mulC (tri identity (composition mulC (tri identity identity)))
 
 sqr2 :: D Double Double
-sqr2 = composition addC (tri identity identity)
+sqr2 = composition mulC (tri identity identity)
 
 sqr3 :: (Num t) => t -> t
 sqr3 = composition mulC (tri identity identity)
@@ -271,6 +271,9 @@ inrF b = (0, b)
 
 jamF :: (Num a) => (a, a) -> a
 jamF = uncurry (+)
+
+sqr :: D Double Double
+sqr = composition mulC (tri identity identity)
 
 -- xyzProd works fine as a function and when supplied with derivatives
 -- xyzProd :: D [Integer] Integer
@@ -320,4 +323,39 @@ a = array (1, 4) [(1, 2), (2, 3), (3, 4), (4, 5)]
 
 xyzProd :: (Num a, Ix i, Num i) => D (Array i a) a
 xyzProd = composition mulC (tri (leftinD 3) (composition mulC (tri (leftinD 1) (leftinD 2))))
+
+magSqr23 :: (Num a, Ix i, Num i) => D (Array i a) a
+magSqr23 = composition addC (tri (composition mulC (tri (leftinD 1) (leftinD 1))) (composition mulC (tri (leftinD 2) (leftinD 2))))
+
+newsqr :: (Ix i, Num i) => D (Array i Double) Double
+newsqr = composition sqr2 magSqr23
+
+crossn :: (Ix i, Num i, Enum i) => i -> Array i (t -> e) -> t -> Array i e
+crossn n arr = \val -> array (1, n) [(i, (arr ! i) val)| i <- [1..n]]
+
+crossD :: (Ix i, Num i, Enum i, Num j, Ix j, Enum j) => i -> Array i (D (Array j a) e) -> D (Array j a) (Array i e)
+crossD n arr = D (\val -> (array (1, n) [(i, fst (stripD (arr ! i) val)) | i <- [1..n]], crossn n (array (1, n) [(i, snd ((stripD (arr ! i)) val)) | i <- [1 .. n]])))
+
+f1 = crossD 3 (array (1,3) [(1, composition sqr (leftinD 3)), (2, composition sqr (leftinD 2)), (3, composition sqr (leftinD 1))])
+
+
+-- So one way to write parallel compositions for n . 
+-- We need to construct the functions in such a way that 
+-- we can get the compositions for the other different 
+-- function types to work with the D constructor. 
+
+-- The simplest way to do this is to supply the parallel 
+-- compositions in a array of differentiable functions 
+
+-- Refer to f1 definition on line 339.
+-- ghci> k = (stripD f1) (array (1,4) [(1,5),(2,4),(3,3),(4,2)])
+-- ghci> fst k
+-- array (1,3) [(1,9.0),(2,16.0),(3,25.0)]
+-- ghci> (snd k) (array (1,4) [(1,0), (2,1), (3,0), (4,0)])
+-- array (1,3) [(1,0.0),(2,8.0),(3,0.0)]
+-- ghci> 
+
+-- f [x,y] = [x , y, x + y]
+
+
 
