@@ -331,31 +331,50 @@ newsqr :: (Ix i, Num i) => D (Array i Double) Double
 newsqr = composition sqr2 magSqr23
 
 crossn :: (Ix i, Num i, Enum i) => i -> Array i (t -> e) -> t -> Array i e
-crossn n arr = \val -> array (1, n) [(i, (arr ! i) val)| i <- [1..n]]
+crossn n arr = \val -> array (1, n) [(i, (arr ! i) val) | i <- [1 .. n]]
 
 crossD :: (Ix i, Num i, Enum i, Num j, Ix j, Enum j) => i -> Array i (D (Array j a) e) -> D (Array j a) (Array i e)
-crossD n arr = D (\val -> (array (1, n) [(i, fst (stripD (arr ! i) val)) | i <- [1..n]], crossn n (array (1, n) [(i, snd ((stripD (arr ! i)) val)) | i <- [1 .. n]])))
+crossD n arr = D (\val -> (array (1, n) [(i, fst (stripD (arr ! i) val)) | i <- [1 .. n]], crossn n (array (1, n) [(i, snd ((stripD (arr ! i)) val)) | i <- [1 .. n]])))
 
-f1 = crossD 3 (array (1,3) [(1, composition sqr (leftinD 3)), (2, composition sqr (leftinD 2)), (3, composition sqr (leftinD 1))])
+-- Example functions for R^m -> R^n functions
 
+f1 :: (Ix i, Ix j, Num i, Enum i, Num j, Enum j) => D (Array i Double) (Array j Double)
+f1 = crossD 3 (array (1, 3) [(1, composition sqr (leftinD 3)), (2, composition sqr (leftinD 2)), (3, composition sqr (leftinD 1))])
 
--- So one way to write parallel compositions for n . 
--- We need to construct the functions in such a way that 
--- we can get the compositions for the other different 
--- function types to work with the D constructor. 
+f2 :: (Ix i, Ix j, Num i, Enum i, Num j, Enum j) => D (Array i Double) (Array j Double)
+f2 = crossD 1 (array (1, 1) [(1, composition sqr (leftinD 2))])
 
--- The simplest way to do this is to supply the parallel 
--- compositions in a array of differentiable functions 
+f3 :: (Ix i, Num i, Enum i, Ix j, Num j, Enum j) => D (Array i Double) (Array j Double)
+f3 = composition f2 f1
+
+-- So one way to write parallel compositions for n .
+-- We need to construct the functions in such a way that
+-- we can get the compositions for the other different
+-- function types to work with the D constructor.
+
+-- The simplest way to do this is to supply the parallel
+-- compositions in a array of differentiable functions
 
 -- Refer to f1 definition on line 339.
+
+-- f1 [x,y,z,u] = [z^2, y^2, x^2]
+
 -- ghci> k = (stripD f1) (array (1,4) [(1,5),(2,4),(3,3),(4,2)])
 -- ghci> fst k
 -- array (1,3) [(1,9.0),(2,16.0),(3,25.0)]
 -- ghci> (snd k) (array (1,4) [(1,0), (2,1), (3,0), (4,0)])
 -- array (1,3) [(1,0.0),(2,8.0),(3,0.0)]
--- ghci> 
+-- ghci>
 
--- f [x,y] = [x , y, x + y]
-
-
-
+-- k = (stripD f3) (array (1,4) [(1,5),(2,4),(3,3),(4,2)])
+-- f3 [x,y,z,u] = [y^4]
+-- ghci> fst k
+-- array (1,1) [(1,256.0)]
+-- ghci> (snd k) (array (1,4) [(1,0), (2,1), (3,0), (4,0)])
+-- array (1,1) [(1,256.0)]
+-- ghci> (snd k) (array (1,4) [(1,0), (2,0), (3,1), (4,0)])
+-- array (1,1) [(1,0.0)]
+-- ghci> (snd k) (array (1,4) [(1,1.0), (2,0), (3,0), (4,0)])
+-- array (1,1) [(1,0.0)]
+-- ghci> (snd k) (array (1,4) [(1,1.0), (2,0), (3,0), (4,0)])
+-- array (1,1) [(1,0.0)]
